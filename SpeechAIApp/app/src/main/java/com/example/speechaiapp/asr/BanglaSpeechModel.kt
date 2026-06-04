@@ -5,6 +5,8 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import java.io.BufferedReader
+import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.nio.FloatBuffer
 import java.nio.LongBuffer
@@ -20,9 +22,13 @@ class BanglaSpeechModel(private val context: Context) {
         // Load vocab.txt from assets
         vocab = loadVocab("vocab.txt")
 
-        // Load ONNX models from assets
-        encoderSession = env.createSession(readAssetBytes("encoder_model.onnx"), OrtSession.SessionOptions())
-        decoderSession = env.createSession(readAssetBytes("decoder_model.onnx"), OrtSession.SessionOptions())
+        // Copy ONNX models to local files if they don't exist
+        val encoderFile = copyAssetToFile("encoder_model.onnx")
+        val decoderFile = copyAssetToFile("decoder_model.onnx")
+
+        // Load sessions from file paths (uses native memory/mmap, avoids JVM OOM)
+        encoderSession = env.createSession(encoderFile.absolutePath, OrtSession.SessionOptions())
+        decoderSession = env.createSession(decoderFile.absolutePath, OrtSession.SessionOptions())
     }
 
     private fun loadVocab(fileName: String): List<String> {
@@ -39,8 +45,29 @@ class BanglaSpeechModel(private val context: Context) {
         return list
     }
 
-    private fun readAssetBytes(fileName: String): ByteArray {
-        return context.assets.open(fileName).use { it.readBytes() }
+    private fun copyAssetToFile(fileName: String): File {
+        val outFile = File(context.filesDir, fileName)
+        
+        // Open the asset to check size
+        context.assets.open(fileName).use { assetStream ->
+            val assetSize = assetStream.available().toLong()
+            
+            // If the file already exists and has the correct size, skip copying
+            if (outFile.exists() && outFile.length() == assetSize) {
+                return outFile
+            }
+            
+            // Otherwise, copy in chunks to avoid high memory consumption
+            FileOutputStream(outFile).use { outStream ->
+                val buffer = ByteArray(64 * 1024) // 64KB buffer
+                var bytesRead = assetStream.read(buffer)
+                while (bytesRead != -1) {
+                    outStream.write(buffer, 0, bytesRead)
+                    bytesRead = assetStream.read(buffer)
+                }
+            }
+        }
+        return outFile
     }
 
     fun transcribe(rawAudio: FloatArray): String {

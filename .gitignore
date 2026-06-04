@@ -21,3 +21,6 @@ last_uploaded.wav
 *.onnx
 onnx_model/
 
+# Java 8 unzipped local folder
+java-1.8.0-openjdk*/
+
