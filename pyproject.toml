@@ -1,0 +1,15 @@
+[project]
+name = "my-speech-model"
+version = "0.1.0"
+description = "ASR Model Runner for Bangla Moonshine"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "transformers>=4.45.0",
+    "torch",
+    "soundfile",
+    "librosa",
+    "numpy",
+]

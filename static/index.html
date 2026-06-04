@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangla ASR - Local Speech Recognition</title>
+    <!-- Google Fonts: Outfit for English/UI, Noto Sans Bengali for Bengali text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Link CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="background-decor">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo-wrapper">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM11 6C11 5.45 11.45 5 12 5C12.55 5 13 5.45 13 6V11.5L16.2 13.4C16.65 13.65 16.8 14.25 16.55 14.7C16.3 15.15 15.7 15.3 15.25 15.05L11.5 12.8C11.2 12.6 11 12.3 11 12V6Z" fill="currentColor"/>
+                    <path d="M12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 8.5C10.07 8.5 8.5 10.07 8.5 12C8.5 13.93 10.07 15.5 12 15.5C13.93 15.5 15.5 13.93 15.5 12C15.5 10.07 13.93 8.5 12 8.5Z" fill="currentColor" opacity="0.3"/>
+                </svg>
+                <h1>Bangla ASR <span class="badge">Local</span></h1>
+            </div>
+            <p class="subtitle">বাংলা স্বরলিপি রূপান্তরকারী — স্থানীয় ও সুরক্ষিত এএসআর মডেল রানার</p>
+        </header>
+
+        <main class="app-main-card">
+            <!-- Tab Navigation -->
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="mic">
+                    <svg viewBox="0 0 24 24" class="tab-icon"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" fill="currentColor"/></svg>
+                    কণ্ঠ রেকর্ড করুন (Record Mic)
+                </button>
+                <button class="tab-btn" data-tab="upload">
+                    <svg viewBox="0 0 24 24" class="tab-icon"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" fill="currentColor"/></svg>
+                    অডিও ফাইল আপলোড (Upload Audio)
+                </button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="tab-contentactive" id="tab-mic-content">
+                <div class="mic-panel">
+                    <div class="wave-visualizer-container">
+                        <canvas id="wave-canvas"></canvas>
+                        <div class="timer" id="recording-timer">00:00</div>
+                    </div>
+                    
+                    <div class="controls-row">
+                        <button class="btn btn-record" id="btn-record">
+                            <span class="btn-pulse-ring"></span>
+                            <span class="icon-dot"></span>
+                            রেকর্ড করুন (Record)
+                        </button>
+                        <button class="btn btn-stop" id="btn-stop" disabled>
+                            <svg viewBox="0 0 24 24" class="btn-icon"><path d="M6 6h12v12H6z" fill="currentColor"/></svg>
+                            থামুন (Stop)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-upload-content" style="display: none;">
+                <div class="upload-dropzone" id="dropzone">
+                    <svg viewBox="0 0 24 24" class="upload-large-icon"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" fill="currentColor"/></svg>
+                    <p class="dropzone-text">এখানে ফাইলটি ড্র্যাগ করুন অথবা ব্রাউজ করতে ক্লিক করুন</p>
+                    <span class="dropzone-subtext">সমর্থিত ফাইল: WAV, MP3, M4A, WEBM, OGG (সর্বোচ্চ ২০ এমবি)</span>
+                    <input type="file" id="file-input" accept="audio/*" style="display: none;">
+                </div>
+            </div>
+
+            <!-- Audio Player Section (Hidden until audio is recorded or uploaded) -->
+            <div class="audio-player-container" id="player-container" style="display: none;">
+                <div class="player-header">
+                    <span class="player-title" id="player-filename">সংযুক্ত অডিও (Selected Audio)</span>
+                    <div class="player-actions">
+                        <a id="btn-download-audio" class="btn-download" download="recorded_audio.wav" style="display: none;" title="অডিও ডাউনলোড করুন">
+                            <svg viewBox="0 0 24 24" class="action-icon" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" fill="currentColor"/></svg>ডাউনলোড (Download)
+                        </a>
+                        <button class="btn-close" id="btn-clear-audio" title="অডিও সরান">×</button>
+                    </div>
+                </div>
+                <audio id="audio-preview" controls></audio>
+            </div>
+
+            <!-- Action Button -->
+            <div class="action-container">
+                <button class="btn btn-primary" id="btn-transcribe" disabled>
+                    <svg viewBox="0 0 24 24" class="btn-icon animate-spin" id="spinner-icon" style="display: none;">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" stroke-dasharray="32" stroke-dashoffset="8"></circle>
+                    </svg>
+                    <svg viewBox="0 0 24 24" class="btn-icon" id="transcribe-icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                    <span id="transcribe-btn-text">অনুবাদ শুরু করুন (Transcribe)</span>
+                </button>
+            </div>
+
+            <!-- Transcription Output Panel -->
+            <div class="result-panel" id="result-panel">
+                <div class="result-header">
+                    <h3>
+                        <svg viewBox="0 0 24 24" class="header-icon"><path d="M21 15c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h14l4 4V15zm-2-2H5c-.55 0-1-.45-1-1V5c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v7c0 .55-.45 1-1 1z" fill="currentColor"/></svg>
+                        রূপান্তরিত লেখা (Transcription)
+                    </h3>
+                    <div class="result-actions">
+                        <button class="btn-copy" id="btn-copy" disabled>
+                            <svg viewBox="0 0 24 24" class="action-icon"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg>
+                            কপি করুন (Copy)
+                        </button>
+                    </div>
+                </div>
+                <div class="transcription-box" id="transcription-text" placeholder="অনুবাদ করা টেক্সট এখানে প্রদর্শিত হবে..."></div>
+                <div class="result-meta">
+                    <span id="meta-words">শব্দ: ০</span>
+                    <span id="meta-chars">অক্ষর: ০</span>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <p>ASR Model: <a href="https://huggingface.co/Sanji27/fountain" target="_blank">Sanji27/fountain</a> (Useful Sensors Moonshine based)</p>
+            <p class="copyright">&copy; 2026 Local ASR Environment</p>
+        </footer>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Link JS -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

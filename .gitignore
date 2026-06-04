@@ -1,0 +1,18 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Local / temporary test outputs
+decoded.txt
+gen_test.txt
+last_uploaded.wav
+*.wav
+*.mp3
+*.webm
+*.ogg
+
+# IDE files
+.vscode/
+.idea/
+.gemini/
