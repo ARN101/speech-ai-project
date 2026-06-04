@@ -16,3 +16,8 @@ last_uploaded.wav
 .vscode/
 .idea/
 .gemini/
+
+# Large ONNX models
+*.onnx
+onnx_model/
+
