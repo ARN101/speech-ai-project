@@ -31,7 +31,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
 
     private var speechModel: BanglaSpeechModel? = null
     private val audioRecorder = AudioRecorder()
-    private val recordedAudioData = ArrayList<Short>()
+    private val recordedAudioData = ShortArrayBuilder()
 
     init {
         // Load model in a background thread to prevent blocking main UI thread on startup
@@ -62,9 +62,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         try {
             audioRecorder.startRecording { data ->
                 synchronized(recordedAudioData) {
-                    for (sample in data) {
-                        recordedAudioData.add(sample)
-                    }
+                    recordedAudioData.add(data)
                 }
             }
         } catch (e: Exception) {
@@ -118,6 +116,40 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         audioRecorder.stopRecording()
         viewModelScope.launch(Dispatchers.IO) {
             speechModel?.close()
+        }
+    }
+}
+
+// Flat primitive builder to avoid primitive object boxing/unboxing overhead and GC pauses during capture
+class ShortArrayBuilder(initialCapacity: Int = 160000) {
+    private var data = ShortArray(initialCapacity)
+    private var size = 0
+
+    fun add(elements: ShortArray) {
+        ensureCapacity(size + elements.size)
+        System.arraycopy(elements, 0, data, size, elements.size)
+        size += elements.size
+    }
+
+    fun toShortArray(): ShortArray {
+        val result = ShortArray(size)
+        System.arraycopy(data, 0, result, 0, size)
+        return result
+    }
+
+    fun clear() {
+        size = 0
+    }
+
+    private fun ensureCapacity(minCapacity: Int) {
+        if (minCapacity > data.size) {
+            var newCapacity = data.size * 2
+            if (newCapacity < minCapacity) {
+                newCapacity = minCapacity
+            }
+            val newData = ShortArray(newCapacity)
+            System.arraycopy(data, 0, newData, 0, size)
+            data = newData
         }
     }
 }

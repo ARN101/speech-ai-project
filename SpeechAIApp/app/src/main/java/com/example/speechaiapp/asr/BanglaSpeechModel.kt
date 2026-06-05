@@ -26,9 +26,15 @@ class BanglaSpeechModel(private val context: Context) {
         val encoderFile = copyAssetToFile("encoder_model.onnx")
         val decoderFile = copyAssetToFile("decoder_model.onnx")
 
+        // Configure SessionOptions (4 threads, ALL_OPT graph optimization for mobile CPU speed)
+        val options = OrtSession.SessionOptions().apply {
+            setIntraOpNumThreads(4)
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+        }
+
         // Load sessions from file paths (uses native memory/mmap, avoids JVM OOM)
-        encoderSession = env.createSession(encoderFile.absolutePath, OrtSession.SessionOptions())
-        decoderSession = env.createSession(decoderFile.absolutePath, OrtSession.SessionOptions())
+        encoderSession = env.createSession(encoderFile.absolutePath, options)
+        decoderSession = env.createSession(decoderFile.absolutePath, options)
     }
 
     private fun loadVocab(fileName: String): List<String> {
@@ -113,8 +119,13 @@ class BanglaSpeechModel(private val context: Context) {
 
         // 3. Run Decoder Autoregressively
         val generatedTokens = mutableListOf<Long>(2L) // start token id = 2 (BOS / CLS)
-        val maxNewTokens = 128
+        val maxNewTokens = 256
         val eosTokenId = 3L
+
+        // Hoist the constant encoder hidden state tensor creation out of the loop
+        // to avoid allocating and copying 80MB of JNI memory on every token generation step.
+        val hiddenStateBuffer = FloatBuffer.wrap(hiddenStateArray)
+        val encoderHiddenStatesTensor = OnnxTensor.createTensor(env, hiddenStateBuffer, lastHiddenStateShape)
 
         for (step in 0 until maxNewTokens) {
             val decSeqLen = generatedTokens.size.toLong()
@@ -123,9 +134,6 @@ class BanglaSpeechModel(private val context: Context) {
             // Create inputs for decoder
             val inputIdsBuffer = LongBuffer.wrap(generatedTokens.toLongArray())
             val inputIdsTensor = OnnxTensor.createTensor(env, inputIdsBuffer, decInputShape)
-            
-            val hiddenStateBuffer = FloatBuffer.wrap(hiddenStateArray)
-            val encoderHiddenStatesTensor = OnnxTensor.createTensor(env, hiddenStateBuffer, lastHiddenStateShape)
 
             val decOutputs = decoderSession.run(mapOf(
                 "input_ids" to inputIdsTensor,
@@ -155,7 +163,6 @@ class BanglaSpeechModel(private val context: Context) {
             
             decOutputs.close()
             inputIdsTensor.close()
-            encoderHiddenStatesTensor.close()
             
             if (nextTokenId == eosTokenId) {
                 break
@@ -163,9 +170,17 @@ class BanglaSpeechModel(private val context: Context) {
             
             generatedTokens.add(nextTokenId)
         }
+        encoderHiddenStatesTensor.close()
 
         // 4. Tokenizer Decoding
-        return decodeTokens(generatedTokens.drop(1)) // drop start token
+        val decodedText = decodeTokens(generatedTokens.drop(1)) // drop start token
+        val trimmedText = decodedText.trim()
+        val cleanedText = if (trimmedText.startsWith("মিউজিক")) {
+            trimmedText.substring("মিউজিক".length).trim()
+        } else {
+            trimmedText
+        }
+        return cleanedText
     }
 
     private fun decodeTokens(tokens: List<Long>): String {
